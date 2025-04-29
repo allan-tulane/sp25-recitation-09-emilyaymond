@@ -12,32 +12,60 @@ def prim(graph):
     Each tree is a set of (weight, node1, node2) tuples.    
     """
     def prim_helper(visited, frontier, tree):
-        if len(frontier) == 0:
-            return tree
-        else:
-            weight, node, parent = heappop(frontier)
-            if node in visited:
-                return prim_helper(visited, frontier, tree)
-            else:
-                print('visiting', node)
-                # record this edge in the tree
-                tree.add((weight, node, parent))
-                visited.add(node)
-                for neighbor, w in graph[node]:
-                    heappush(frontier, (w, neighbor, node))    
-                    # compare with dijkstra:
-                    # heappush(frontier, (distance + weight, neighbor))                
+        if not frontier:
+            return
+        weight, node, parent = heappop(frontier)
+        if node in visited:
+            prim_helper(visited, frontier, tree)
 
-                return prim_helper(visited, frontier, tree)
-        
-    # pick first node as source arbitrarily
-    source = list(graph.keys())[0]
-    frontier = []
-    heappush(frontier, (0, source, source))
-    visited = set()  # store the visited nodes (don't need distance anymore)
-    tree = set()
-    prim_helper(visited, frontier, tree)
-    return tree
+        else:
+            visited.add(node)
+            if node != parent:
+                tree.add((weight, node, parent))
+            for neighbor, w in graph[node]:
+                if neighbor not in visited:
+                    heappush(frontier, (w, neighbor, node))
+            prim_helper(visited, frontier, tree)
+    visited_global = set()
+    trees = []
+
+    for node in graph:
+        if node not in visited_global:
+            tree = set()
+            frontier = []
+            heappush(frontier, (0, node, node))
+            visited_local = set()
+            prim_helper(visited_local, frontier, tree)
+            trees.append(tree)
+            visited_global.update(visited_local)
+
+    return trees
+    #     if len(frontier) == 0:
+    #         return tree
+    #     else:
+    #         weight, node, parent = heappop(frontier)
+    #         if node in visited:
+    #             return prim_helper(visited, frontier, tree)
+    #         else:
+    #             print('visiting', node)
+    #             # record this edge in the tree
+    #             tree.add((weight, node, parent))
+    #             visited.add(node)
+    #             for neighbor, w in graph[node]:
+    #                 heappush(frontier, (w, neighbor, node))
+    #                 # compare with dijkstra:
+    #                 # heappush(frontier, (distance + weight, neighbor))
+    #
+    #             return prim_helper(visited, frontier, tree)
+    #
+    # # pick first node as source arbitrarily
+    # source = list(graph.keys())[0]
+    # frontier = []
+    # heappush(frontier, (0, source, source))
+    # visited = set()  # store the visited nodes (don't need distance anymore)
+    # tree = set()
+    # prim_helper(visited, frontier, tree)
+    # return tree
 
 def test_prim():    
     graph = {
@@ -51,14 +79,15 @@ def test_prim():
         }
 
     trees = prim(graph)
+    print('trees:', trees)
     assert len(trees) == 2
     # since we are not guaranteed to get the same order
     # of edges in the answer, we'll check the size and
     # weight of each tree.
     len1 = len(trees[0])
     len2 = len(trees[1])
-    assert min([len1, len2]) == 2
-    assert max([len1, len2]) == 5
+    assert min([len1, len2]) == 1
+    assert max([len1, len2]) == 4
 
     sum1 = sum(e[0] for e in trees[0])
     sum2 = sum(e[0] for e in trees[1])
@@ -81,8 +110,16 @@ def mst_from_points(points):
       a list of edges of the form (weight, node1, node2) indicating the minimum spanning
       tree connecting the cities in the input.
     """
-    ###TODO
-    pass
+    graph = defaultdict(set)
+    for i, p1 in enumerate(points):
+        for j in range(i+1, len(points)):
+            p2 = points[j]
+            distance = euclidean_distance(p1, p2)
+            graph[p1[0]].add((p2[0], distance))
+            graph[p2[0]].add((p1[0], distance))
+
+    tree = prim(graph)
+    return list(tree[0]) if tree else []
 
 def euclidean_distance(p1, p2):
     return sqrt((p1[1] - p2[1])**2 + (p1[2] - p2[2])**2)
